@@ -12,6 +12,9 @@ df['sub_fees'] = pd.to_numeric(df['sub_fees'])
 # Update GLENEAGLES fee to 325
 df.loc[df['subdivision'] == 'GLENEAGLES', 'sub_fees'] = 325
 
+# Update CASCADES fee (subtract 120)
+df.loc[df['subdivision'] == 'CASCADES', 'sub_fees'] = df.loc[df['subdivision'] == 'CASCADES', 'sub_fees'] - 100
+
 # Sort by sub_fees descending
 df = df.sort_values('sub_fees', ascending=False)
 
@@ -33,9 +36,17 @@ for i, (idx, row) in enumerate(df.iterrows()):
         ax.add_patch(orange_patch)
         break
 
-# Add subdivision names on bars
+# Add subdivision names on bars with unit counts for specific subdivisions
 for i, (idx, row) in enumerate(df.iterrows()):
-    ax.text(i, row['sub_fees']/2, row['subdivision'],
+    subdivision_name = row['subdivision']
+    if subdivision_name == 'GLENEAGLES':
+        subdivision_name = 'GLENEAGLES (92 units)'
+    elif subdivision_name == 'SHORELINE':
+        subdivision_name = 'SHORELINE (124 units)'
+    elif subdivision_name == 'FAIRWAYS':
+        subdivision_name = 'FAIRWAYS (56 units)'
+
+    ax.text(i, row['sub_fees']/2, subdivision_name,
             ha='center', va='center', rotation=90, fontsize=8, color='white', weight='bold')
 
 # Add city labels at bottom of bars
@@ -49,41 +60,58 @@ legend_elements = [
     Patch(facecolor='red', label='Diamond Management'),
     Patch(facecolor='blue', label='Other Managements')
 ]
-ax.legend(handles=legend_elements, loc='upper right', fontsize=10)
+ax.legend(handles=legend_elements, loc='upper right', fontsize=14)
 
 # Find positions of EDGEWATER and FAIRWAYS
-edgewater_idx = None
+shoreline_idx = None
 fairways_idx = None
 for i, (idx, row) in enumerate(df.iterrows()):
-    if row['subdivision'] == 'EDGEWATER':
-        edgewater_idx = i
+    if row['subdivision'] == 'SHORELINE':
+        shoreline_idx = i
     elif row['subdivision'] == 'FAIRWAYS':
         fairways_idx = i
 
 # Add label and arrows for "same buildings as GlenEagles"
-if edgewater_idx is not None and fairways_idx is not None:
+if shoreline_idx is not None and fairways_idx is not None:
     # Place label in upper right area
-    label_x = len(df) - 5
-    label_y = df['sub_fees'].max() * 0.75
-    ax.text(label_x, label_y, 'Same buildings\nas GlenEagles',
-            fontsize=9, ha='center', va='center',
+    label_x = 9
+    label_y = 210
+    ax.text(label_x, label_y, 'Same condos\nas in GlenEagles',
+            fontsize=16, ha='center', va='center',
             bbox=dict(boxstyle='round,pad=0.5', facecolor='lightyellow', edgecolor='black'))
 
     # Arrow to EDGEWATER
-    edgewater_fee = df.iloc[edgewater_idx]['sub_fees']
-    arrow1 = FancyArrowPatch((label_x - 0.5, label_y - 10), (edgewater_idx, edgewater_fee + 10),
-                            arrowstyle='->', mutation_scale=20, linewidth=1.5, color='black')
+    edgewater_fee = df.iloc[shoreline_idx]['sub_fees']
+    arrow1 = FancyArrowPatch((label_x + 0.5, label_y - 10), (shoreline_idx+0.4, edgewater_fee - 3),
+                             arrowstyle='->', mutation_scale=20, linewidth=1.5, color='black')
     ax.add_patch(arrow1)
 
     # Arrow to FAIRWAYS
     fairways_fee = df.iloc[fairways_idx]['sub_fees']
-    arrow2 = FancyArrowPatch((label_x - 0.5, label_y - 10), (fairways_idx, fairways_fee + 10),
+    arrow2 = FancyArrowPatch((label_x + 0.5, label_y - 10), (fairways_idx+0.4, fairways_fee - 10),
                             arrowstyle='->', mutation_scale=20, linewidth=1.5, color='black')
     ax.add_patch(arrow2)
 
-# Set labels
+# Add label and arrow for "Our new HOA" pointing to GLENEAGLES
+if gleneagles_idx is not None:
+    gleneagles_fee = df.iloc[gleneagles_idx]['sub_fees']
+    # Place label above the GlenEagles bar
+    label2_x = gleneagles_idx + 5
+    label2_y = gleneagles_fee - 5
+    ax.text(label2_x, label2_y, 'Our new HOA',
+            fontsize=20, ha='center', va='center', weight='bold',
+            bbox=dict(boxstyle='round,pad=0.5', facecolor='lightyellow', edgecolor='black'))
+
+    # Arrow pointing to the top of GLENEAGLES bar
+    arrow3 = FancyArrowPatch((label2_x, label2_y), (gleneagles_idx + 0.5, label2_y),
+                            arrowstyle='->', mutation_scale=20, linewidth=3, color='red')
+    ax.add_patch(arrow3)
+
+# Set title and labels
+ax.set_title('Kiln Creek community HOA fees', fontsize=16, weight='bold')
 ax.set_xlabel('Kiln Creek villages', fontsize=12)
 ax.set_ylabel('HOA Fees ($)', fontsize=12)
+ax.set_ylim(0, 360)
 ax.set_xticks([])
 
 # Adjust layout and save
